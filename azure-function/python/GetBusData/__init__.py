@@ -26,7 +26,7 @@ def main(GetBusData: func.TimerRequest) -> None:
     """Retrieve the routes we want to monitor from the SQL Database"""
     conn: str = pyodbc.connect(AZURE_CONN_STRING)
 
-    #print(AZURE_CONN_STRING)
+    print("Executed Successfully!")
     #monitored_routes: list[int] = get_monitored_routes(conn)
     #logging.info(f"{len(monitored_routes)} routes to check against")
     #entities = get_bus_data_from_feed(GTFS_REAL_TIME_FEED)['entity']
