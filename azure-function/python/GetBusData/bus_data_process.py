@@ -57,7 +57,7 @@ def get_monitored_routes(conn) -> list[int]:
     with conn.cursor() as cursor:
         cursor.execute(f"EXEC web.GetMonitoredRoutes")
         results = json.loads(cursor.fetchone()[0])
-        routes = [str(route['RouteId']) for route in results]
+        routes = [str(route['route_id']) for route in results]
     return routes
  
 
