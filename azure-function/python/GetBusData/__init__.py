@@ -68,5 +68,4 @@ def main(GetBusData: func.TimerRequest) -> None:
                 }
         
             trigger_logic_app(fence_success, LOGIC_APP_URL)
-        else:
-            logging.info(f"No buses are in the geofence at this time.")
+    
