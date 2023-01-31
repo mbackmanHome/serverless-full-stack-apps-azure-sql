@@ -4,10 +4,14 @@ from datetime import datetime, timezone
 from typing import Any
 
 import requests
+from turfpy.measurement import boolean_point_in_polygon
+from geojson import Point, Polygon, Feature
+
+
 
 def get_timestamp(timestamp: str) -> str:
     """return the timestamp in a human readable string"""
-    return datetime.fromtimestamp(timestamp, timezone.utc).isoformat(sep=' ')
+    return datetime.fromtimestamp(int(timestamp), timezone.utc).isoformat(sep=' ')
 
 def get_bus_data_from_feed(feed_url:str) -> list[dict[str, Any]]:
     """Retrieve the raw bus data from the GTFS Real Time Feed"""
@@ -20,21 +24,43 @@ def get_monitored_format(record: dict) -> dict:
     """Create a custom dictionary from a passed record information"""
 
     return dict(
-        DirectionId=record['trip']['direction_id'],
-        RouteId=record['trip']['route_id'],
+        DirectionId=record['trip']['directionId'],
+        RouteId=record['trip']['routeId'],
         VehicleId=record['vehicle']['id'], # full path from file is ['vehicle']['vehicle']['id']
         Position={
             "Latitude": record['position']['latitude'],
             "Longitude": record['position']['longitude']
         },
+        
         TimestampUTC= get_timestamp(record['timestamp'])
     )
 
 
 def get_route_id(bus_data: dict) -> str:
     """Return the route_id from the monitored_route"""
-    return bus_data["vehicle"]["trip"]["route_id"]
+    return bus_data["vehicle"]["trip"]["routeId"]
 
+
+def get_geo_fences2(conn) -> list:
+    with conn.cursor() as cursor:
+        cursor.execute("EXEC web.GetGeoFence")
+
+        #result = list()
+
+        result = cursor.fetchone()[0]
+
+        result2 =  result.split(';')
+
+        #result3 = [str(i) for i in result2]
+
+        results3 = list()
+        for y in result2:
+            z = y.split(',')
+            x = [float(i) for i in z]
+
+            results3.append(tuple(x))
+
+        return results3
 
 def get_geo_fences(conn, payload: list[dict[str: Any]]):
     """Connect to the SQL Database and execute the passed procedure"""
@@ -63,11 +89,13 @@ def get_monitored_routes(conn) -> list[int]:
 
 def trigger_logic_app(fence, logic_app_url: str) -> None:
         content = {
-            "value1": str(fence["VehicleId"]), 
-            "value2": str(fence["GeoFenceStatus"])
+            "VehicleId": str(fence["VehicleId"]), 
+            "RouteId": str(fence["RouteId"]),
+            "TimestampUTC": str(fence["TimestampUTC"])
         }
 
         logging.info("Calling Logic App webhook for {0}".format(fence["VehicleId"]))
+        print("Calling Logic App webhook for {0}".format(fence["VehicleId"]))
 
         params = { 
             "Content-type": "application/json" 
@@ -77,3 +105,11 @@ def trigger_logic_app(fence, logic_app_url: str) -> None:
         response.raise_for_status()
         return response
         
+
+
+def get_geo_fence_status(latitude: float, longitude: float, geofence: list[tuple]) -> bool:
+    point = Feature(geometry=Point((latitude, longitude)))
+    polygon = Polygon([geofence])
+    
+    return boolean_point_in_polygon(point, polygon)
+
