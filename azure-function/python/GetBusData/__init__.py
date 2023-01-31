@@ -28,13 +28,13 @@ def main(GetBusData: func.TimerRequest) -> None:
     """Retrieve the routes we want to monitor from the SQL Database"""
     conn: str = pyodbc.connect(AZURE_CONN_STRING)
 
-    logging.info(f"Executed Successfully!")
+    #logging.info(f"Executed Successfully!")
 
 
     monitored_routes: list[int] = get_monitored_routes(conn)
     logging.info(f"{len(monitored_routes)} routes to check against")
     entities = get_bus_data_from_feed(GTFS_REAL_TIME_FEED)['entity']
-    logging.info(monitored_routes)
+    #logging.info(monitored_routes)
     #logging.info(entities)
     #print(entities)
     entities2 = [i for i in entities if i['vehicle'].get('trip') is not None]
@@ -55,17 +55,18 @@ def main(GetBusData: func.TimerRequest) -> None:
 
    
     for bus in monitored_buses:
-        print(bus['VehicleId'] )
         lat = bus['Position']['Latitude']
         long = bus['Position']['Longitude']
 
         geo_fence_status = get_geo_fence_status(lat, long, out)
 
         if geo_fence_status:
-            print("yes!")
+            logging.info(f"A bus has entered the geofence!. VehicleId is {str(bus['VehicleId'])}.")
             fence_success = {"TimestampUTC": str(bus['TimestampUTC']),
                 "RouteId": str(bus['RouteId']),
                 "VehicleId": str(bus['VehicleId'])
                 }
         
             trigger_logic_app(fence_success, LOGIC_APP_URL)
+        else:
+            logging.info(f"No buses are in the geofence at this time.")
